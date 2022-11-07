@@ -1,9 +1,12 @@
 package br.com.deveficiente.desafiomercadolivreauth.config;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
@@ -13,8 +16,11 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 import org.springframework.security.oauth2.provider.CompositeTokenGranter;
 import org.springframework.security.oauth2.provider.TokenGranter;
 import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.store.KeyStoreKeyFactory;
 import org.springframework.security.oauth2.provider.token.store.redis.RedisTokenStore;
 
+import java.security.KeyPair;
 import java.util.Arrays;
 
 @Configuration
@@ -28,7 +34,8 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
     private UserDetailsService userDetailsService;
 
     @Autowired
-    private RedisConnectionFactory factory;
+    private JwtKeyStoreProperties jwtKeyStoreProperties;
+
 
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
@@ -74,7 +81,6 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
                 .scopes("write","read")
                 .redirectUris("http://client");
 
-
     }
 
     @Override
@@ -82,15 +88,34 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
         endpoints.authenticationManager(authenticationManager)
                 .userDetailsService(userDetailsService)
                 .reuseRefreshTokens(false)
-                .tokenGranter(tokenGranter(endpoints))
-                .tokenStore(tokenStore());
+                .accessTokenConverter(jwtAccessTokenConverter())
+                .tokenGranter(tokenGranter(endpoints));
+    }
 
+    @Bean
+    public JwtAccessTokenConverter jwtAccessTokenConverter(){
+        JwtAccessTokenConverter jwtAccessTokenConverter = new JwtAccessTokenConverter();
+      //  jwtAccessTokenConverter.setSigningKey("DHSAUIHDuidhuiHDIUSAHDUIhduISAHIUDAIUSDHUihduiasduiah");
+
+        ClassPathResource jksResource = new ClassPathResource(jwtKeyStoreProperties.getPath());
+        String keyStorePassword = jwtKeyStoreProperties.getPassword();
+        String keyPairAlias = jwtKeyStoreProperties.getKeypairAlias();
+
+        KeyStoreKeyFactory keyStoreFactory = new KeyStoreKeyFactory(jksResource,keyStorePassword.toCharArray());
+
+        KeyPair keyPair = keyStoreFactory.getKeyPair(keyPairAlias);
+
+        jwtAccessTokenConverter.setKeyPair(keyPair);
+
+
+        return jwtAccessTokenConverter;
     }
 
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
         //security.checkTokenAccess("isAuthenticated()");
         security.checkTokenAccess("permitAll()")
+                .tokenKeyAccess("permitAll()")
                 .allowFormAuthenticationForClients();
     }
 
@@ -106,9 +131,8 @@ public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdap
         return new CompositeTokenGranter(granters);
     }
 
-    private TokenStore tokenStore(){
-        return new RedisTokenStore(factory);
-    }
+
+
 
 
 }
