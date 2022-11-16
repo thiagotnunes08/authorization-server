@@ -1,13 +1,15 @@
 package br.com.deveficiente.desafiomercadolivreauth.domain;
 
 import javax.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
 
 //@Data
 //@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 public class Usuario {
 
-   // @EqualsAndHashCode.Include
+    // @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,6 +22,9 @@ public class Usuario {
 
     @Column(nullable = false)
     private String senha;
+
+    @ManyToMany
+    private Set<Grupo> grupos = new HashSet<>();
 
     public String getNome() {
         return nome;
@@ -37,4 +42,11 @@ public class Usuario {
     public Usuario() {
     }
 
+    public Long getId() {
+        return id;
+    }
+
+    public Set<Grupo> getGrupos() {
+        return grupos;
+    }
 }

@@ -14,6 +14,7 @@ public class JwtKeyStoreProperties {
     @NotBlank
     private String path;
 
+
     @NotBlank
     private String password;
 
